@@ -35,31 +35,33 @@ GCCbPath="${MainGCCbPath}"
 VERSION=4.9.337
 KERNELNAME=TheOneMemory
 CODENAME=RMX1971
-VARIANT=EAS
+VARIANT=Stable
+
+LINKER=ld.lld
 
 # Show manufacturer info
-MANUFACTURERINFO="ASUSTek Computer Inc."
+MANUFACTURERINFO="Realme Computer Inc."
 
 # Clone Kernel Source
 git clone --depth=1 https://github.com/strongreasons/android_kernel_realme_sdm710 kernel
 
-# Clone Snapdragon Clang
+# Clone Toolchain
 ClangPath=${MainClangPath}
 [[ "$(pwd)" != "${MainPath}" ]] && cd "${MainPath}"
 mkdir $ClangPath
 rm -rf $ClangPath/*
 msg "|| Cloning sdclang toolchain ||"
-git clone --depth=1 https://github.com/RyuujiX/SDClang -b 14 $ClangPath
+git clone --depth=1 https://github.com/kdrag0n/proton-clang $ClangPath
 
 # Clone GCC
-mkdir $GCCaPath
-rm -rf $GCCaPath/*
-mkdir $GCCbPath
-rm -rf $GCCbPath/*
+#mkdir $GCCaPath
+#rm -rf $GCCaPath/*
+#mkdir $GCCbPath
+#rm -rf $GCCbPath/*
 
-msg "|| Cloning GCC toolchain ||"
-git clone --depth=1 https://github.com/RyuujiX/aarch64-linux-android-4.9 $GCCaPath
-git clone --depth=1 https://github.com/RyuujiX/arm-linux-androideabi-4.9 $GCCbPath
+#msg "|| Cloning GCC toolchain ||"
+#git clone --depth=1 https://github.com/RyuujiX/aarch64-linux-android-4.9 $GCCaPath
+#git clone --depth=1 https://github.com/RyuujiX/arm-linux-androideabi-4.9 $GCCbPath
 
 # Prepared
 KERNEL_ROOTDIR=$(pwd)/kernel # IMPORTANT ! Fill with your kernel source root directory.
@@ -67,8 +69,9 @@ export KBUILD_BUILD_USER=queen # Change with your own name or else.
 IMAGE=$(pwd)/kernel/out/arch/arm64/boot/Image.gz-dtb
 CLANG_VER="Snapdragon clang version 14.1.5"
 #LLD_VER="$("$ClangPath"/bin/ld.lld --version | head -n 1)"
-export KBUILD_COMPILER_STRING="$CLANG_VER X GCC 4.9"
-ClangMoreStrings="AR=llvm-ar NM=llvm-nm AS=llvm-as STRIP=llvm-strip OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump READELF=llvm-readelf HOSTAR=llvm-ar HOSTAS=llvm-as LD_LIBRARY_PATH=$ClangPath/lib LD=ld.lld HOSTLD=ld.lld"
+#export KBUILD_COMPILER_STRING="$CLANG_VER X GCC 4.9"
+#ClangMoreStrings="AR=llvm-ar NM=llvm-nm AS=llvm-as STRIP=llvm-strip OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump READELF=llvm-readelf HOSTAR=llvm-ar HOSTAS=llvm-as LD_LIBRARY_PATH=$ClangPath/lib LD=ld.lld HOSTLD=ld.lld"
+export PATH=$ClangPath/bin:${PATH}
 DATE=$(date +"%Y%m%d-%H%M")
 START=$(date +"%s")
 
@@ -93,13 +96,16 @@ export HASH_HEAD=$(git rev-parse --short HEAD)
 export COMMIT_HEAD=$(git log --oneline -1)
 make -j$(nproc) O=out ARCH=arm64 sdm670-perf_defconfig
 make -j$(nproc) ARCH=arm64 SUBARCH=arm64 O=out \
-    PATH=$ClangPath/bin:$GCCaPath/bin:$GCCbPath/bin:/usr/bin:${PATH} \
+    PATH=$ClangPath/bin:${PATH} \
+    CROSS_COMPILE=aarch64-linux-gnu- \
+    CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
     CC=clang \
-    CROSS_COMPILE=aarch64-linux-android- \
-    CROSS_COMPILE_ARM32=arm-linux-androideabi- \
-    CLANG_TRIPLE=aarch64-linux-gnu- \
-    HOSTCC=gcc \
-    HOSTCXX=g++ ${ClangMoreStrings}
+    AR=llvm-ar \
+    OBJDUMP=llvm-objdump \
+    STRIP=llvm-strip \
+    NM=llvm-nm \
+    OBJCOPY=llvm-objcopy \
+    LD="$LINKER"
 
    if ! [ -a "$IMAGE" ]; then
 	finerr
