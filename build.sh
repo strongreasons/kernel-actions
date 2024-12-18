@@ -33,15 +33,16 @@ GCCbPath="${MainGCCbPath}"
 
 # Identity
 VERSION=4.4.302
-KERNELNAME=SkyWalker
+KERNELNAME=TheOneMemory
 CODENAME=Hayzel
 VARIANT=EAS
+STATUS=EOL
 
 # Show manufacturer info
 MANUFACTURERINFO="ASUSTek Computer Inc."
 
 # Clone Kernel Source
-git clone --depth=1 --recursive https://github.com/strongreasons/android_kernel_asus_sdm660 -b test kernel
+git clone --depth=1 --recursive https://github.com/strongreasons/android_kernel_asus_sdm660 -b lts kernel
 
 # Clone Snapdragon Clang
 ClangPath=${MainClangPath}
@@ -70,6 +71,7 @@ CLANG_VER="Snapdragon clang version 14.1.5"
 export KBUILD_COMPILER_STRING="$CLANG_VER X GCC 4.9"
 ClangMoreStrings="AR=llvm-ar NM=llvm-nm AS=llvm-as STRIP=llvm-strip OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump READELF=llvm-readelf HOSTAR=llvm-ar HOSTAS=llvm-as LD_LIBRARY_PATH=$ClangPath/lib LD=ld.lld HOSTLD=ld.lld"
 DATE=$(date +"%Y%m%d-%H%M")
+DATE2=$(date +"%Y%m%d")
 START=$(date +"%s")
 
 # Java
@@ -77,6 +79,7 @@ command -v java > /dev/null 2>&1
 
 # Telegram
 export BOT_MSG_URL="https://api.telegram.org/bot$TG_TOKEN/sendMessage"
+export BOT_MSG_URL="https://api.telegram.org/bot$TG_TOKEN/sendDocument"
 
 # Telegram messaging
 tg_post_msg() {
@@ -85,6 +88,7 @@ tg_post_msg() {
     -d "parse_mode=html" \
     -d text="$1"
 }
+
 # Compiler
 compile(){
 cd ${KERNEL_ROOTDIR}
@@ -107,9 +111,10 @@ make -j$(nproc) ARCH=arm64 SUBARCH=arm64 O=out \
    fi
 
    msg "|| Cloning AnyKernel ||"
-   git clone --depth=1 https://github.com/Tiktodz/AnyKernel3 -b eas AnyKernel
+   git clone --depth=1 https://github.com/Tiktodz/AnyKernel3 -b hmp-old AnyKernel
 	cp $IMAGE AnyKernel
 }
+
 # Push kernel to telegram
 function push() {
     cd AnyKernel
@@ -137,6 +142,7 @@ function push() {
         <b></b>
         #$KERNELNAME #$VARIANT"
 }
+
 # Find Error
 function finerr() {
     curl -s -X POST "https://api.telegram.org/bot$TG_TOKEN/sendMessage" \
@@ -146,17 +152,18 @@ function finerr() {
         -d text="❌ Tetap menyerah...Pasti bisa!!!"
     exit 1
 }
+
 # Zipping
 function zipping() {
 cd AnyKernel || exit 1
-#cp -af $KERNEL_DIR/init.$CODENAME.Spectrum.rc spectrum/init.spectrum.rc && sed -i "s/persist.spectrum.kernel.*/persist.spectrum.kernel TheOneMemory/g" spectrum/init.spectrum.rc
-#cp -af $KERNEL_DIR/changelog META-INF/com/google/android/aroma/changelog.txt
+cp -af $KERNEL_DIR/init.$CODENAME.Spectrum.rc spectrum/init.spectrum.rc && sed -i "s/persist.spectrum.kernel.*/persist.spectrum.kernel TheOneMemory/g" spectrum/init.spectrum.rc
+cp -af $KERNEL_DIR/changelog META-INF/com/google/android/aroma/changelog.txt
 cp -af anykernel-real.sh anykernel.sh
 sed -i "s/kernel.string=.*/kernel.string=$KERNELNAME/g" anykernel.sh
 sed -i "s/kernel.type=.*/kernel.type=$VARIANT/g" anykernel.sh
 sed -i "s/kernel.for=.*/kernel.for=$CODENAME/g" anykernel.sh
 sed -i "s/kernel.compiler=.*/kernel.compiler=$KBUILD_COMPILER_STRING/g" anykernel.sh
-sed -i "s/kernel.made=.*/kernel.made=dotkit @fakedotkit/g" anykernel.sh
+sed -i "s/kernel.made=.*/kernel.made=dotkit @queenserenade/g" anykernel.sh
 sed -i "s/kernel.version=.*/kernel.version=$VERSION/g" anykernel.sh
 sed -i "s/message.word=.*/message.word=Appreciate your efforts for choosing TheOneMemory kernel./g" anykernel.sh
 sed -i "s/build.date=.*/build.date=$DATE/g" anykernel.sh
@@ -177,9 +184,9 @@ sed -i "s/KBDATE/$DATE/g" aroma-config
 sed -i "s/KVARIANT/$VARIANT/g" aroma-config
 cd ../../../..
 
-    zip -r9 $KERNELNAME-Solifice-$VARIANT-"$DATE" . -x ".git*" -x "README.md" -x "./*placeholder" "*.zip"
+    zip -r9 $KERNELNAME-$STATUS-$VARIANT-"$DATE2" . -x ".git*" -x "README.md" -x "./*placeholder" "*.zip"
 
-    ZIP_FINAL="$KERNELNAME-Solifice-$VARIANT-$DATE"
+    ZIP_FINAL="$KERNELNAME-$STATUS-$VARIANT-$DATE2"
 
     msg "|| Signing Zip ||"
     tg_post_msg "<code>🔑 Signing Zip file with AOSP keys..</code>"
@@ -189,6 +196,7 @@ cd ../../../..
     ZIP_FINAL="$ZIP_FINAL-signed"
     cd ..
 }
+
 compile
 zipping
 END=$(date +"%s")
